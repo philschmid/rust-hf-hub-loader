@@ -19,6 +19,7 @@ build
 
 ```Bash
 cargo build  --release
+mv target/release/hf-hub-loader build/hf-hub-loader
 ```
 
 # get binary and execute
