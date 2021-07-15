@@ -4,6 +4,7 @@ use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+use structopt::StructOpt;
 
 error_chain! {
     foreign_links {
@@ -17,25 +18,45 @@ struct Sibling {
     rfilename: String,
 }
 
+#[derive(Clone, Debug, StructOpt)]
+#[structopt(rename_all = "kebab-case")]
+struct CliArgs {
+    /// The Hugging Face model repository
+    #[structopt(short = "r", long = "repository")]
+    repository: String,
+
+    /// list of strings, which will be used as filter to download the files
+    #[structopt(
+        short = "f",
+        long = "filter",
+        default_value = "infinity",
+        use_delimiter = true
+    )]
+    filter: Vec<String>,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args = CliArgs::from_args();
+    println!("{:?}", args);
     let base_url = "https://huggingface.co";
-    let repo = "philschmid/infinity-sentiment";
-    let test_include_filter_path = vec!["infinity", "huggingface"];
 
-    let request_url = format!("https://huggingface.co/api/models/{repo}", repo = repo);
+    let request_url = format!(
+        "https://huggingface.co/api/models/{repo}",
+        repo = args.repository
+    );
     let response = reqwest::get(&request_url).await?;
     // Parsing the json manually since the response.json changes based on tags, cannot guarantee structure
     let mut repository_information: serde_json::Value = response.json().await?;
     let siblings: Vec<Sibling> =
         serde_json::from_value(repository_information["siblings"].take()).unwrap();
-    let filtered_siblings = filter_siblings(siblings, test_include_filter_path);
+    let filtered_siblings = filter_siblings(siblings, args.filter);
 
     for file in filtered_siblings {
         let remote_file_url = format!(
             "{base_url}/{repo}/resolve/main/{file_path}",
             base_url = base_url,
-            repo = repo,
+            repo = args.repository,
             file_path = file.rfilename,
         );
         load_file(remote_file_url, file.rfilename).await?
@@ -62,7 +83,7 @@ async fn load_file(file_url: String, file_path: String) -> Result<()> {
     Ok(())
 }
 
-fn filter_siblings(siblings: Vec<Sibling>, include_filter_path: Vec<&str>) -> Vec<Sibling> {
+fn filter_siblings(siblings: Vec<Sibling>, include_filter_path: Vec<String>) -> Vec<Sibling> {
     siblings
         .into_iter()
         .filter(|sibling| {
@@ -92,7 +113,7 @@ mod tests {
                 rfilename: String::from("tokenizers/tokenizer.json"),
             },
         ];
-        let test_include_filter_path = vec!["infinity", "huggingface"];
+        let test_include_filter_path = vec![String::from("infinity"), String::from("huggingface")];
         let test_output = filter_siblings(test_siblings, test_include_filter_path);
         assert_eq!(
             test_output,

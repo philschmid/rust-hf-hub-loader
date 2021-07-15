@@ -1,5 +1,5 @@
 [package]
-name = "git_stuff"
+name = "hf-hub-loader"
 version = "0.1.0"
 authors = ["philschmid <schmidphilipp1995@gmail.com>"]
 edition = "2018"
@@ -12,3 +12,4 @@ tokio = { version = "1.8.1", features = ["full"] }
 error-chain = "0.12.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.48"
+structopt = "0.3"
