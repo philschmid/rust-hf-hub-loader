@@ -29,7 +29,7 @@ struct CliArgs {
     #[structopt(
         short = "f",
         long = "filter",
-        default_value = "infinity",
+        // default_value = "infinity",
         use_delimiter = true
     )]
     filter: Vec<String>,
