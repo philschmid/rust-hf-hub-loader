@@ -1,0 +1,16 @@
+{
+  "modelId": "philschmid/infinity-sentiment",
+  "private": false,
+  "sha": "3bb8d6032ed9548af5f7980aaa54c0fc4ba39e5c",
+  "lastModified": "2021-07-09T16:15:31.000Z",
+  "tags": ["onnx", "transformers"],
+  "siblings": [
+    { "rfilename": ".gitattributes" },
+    { "rfilename": "config.json" },
+    { "rfilename": "repository/distilbert-base-uncased-finetuned-sst-2-english/config.pbtxt" },
+    { "rfilename": "repository/distilbert-base-uncased-finetuned-sst-2-english/1/model.onnx" },
+    { "rfilename": "tokenizers/tokenizer.json" }
+  ],
+  "library_name": "transformers",
+  "config": {}
+}
