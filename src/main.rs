@@ -1,10 +1,11 @@
 use error_chain::error_chain;
-use serde::Deserialize;
-use std::fs;
-use std::fs::File;
-use std::io::prelude::*;
+use reqwest::StatusCode;
 use std::path::Path;
+use structopt::clap::arg_enum;
 use structopt::StructOpt;
+
+mod file_loader;
+mod hf_uri;
 
 error_chain! {
     foreign_links {
@@ -13,125 +14,128 @@ error_chain! {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
-struct Sibling {
-    rfilename: String,
+arg_enum! {
+    #[derive(Debug)]
+    enum CliAction {
+        Copy
+    }
 }
 
 #[derive(Clone, Debug, StructOpt)]
 #[structopt(rename_all = "kebab-case")]
 struct CliArgs {
-    /// The Hugging Face model repository
-    #[structopt(short = "r", long = "repository")]
-    repository: String,
+    /// The Hugging Face model uri, e.g. hf://philschmid/infinity-sentiment
+    hf_uri: String,
 
-    /// list of strings, which will be used as filter to download the files
-    #[structopt(
-        short = "f",
-        long = "filter",
-        // default_value = "infinity",
-        use_delimiter = true
-    )]
-    filter: Vec<String>,
+    /// The Hugging Face model uri, e.g. hf://philschmid/infinity-sentiment
+    destination_dir: Option<String>,
+
+    /// Revision of the repository, default is main
+    #[structopt(short = "r", long = "revision", default_value = "main")]
+    revision: String,
+
+    /// Wether auth token should be used or not
+    #[structopt(short = "t", long = "token")]
+    use_auth_token: bool,
 }
 
 fn main() -> Result<()> {
     let args = CliArgs::from_args();
-    println!("{:?}", args);
-    let base_url = "https://huggingface.co";
 
-    let request_url = format!(
-        "https://huggingface.co/api/models/{repo}",
-        repo = args.repository
-    );
-    let response = reqwest::blocking::get(&request_url)?;
+    let repository: hf_uri::Repository = match hf_uri::parse(&args.hf_uri) {
+        Ok(repository) => repository,
+        Err(err) => panic!(err),
+    };
+
+    let response = reqwest::blocking::get(&repository.url)?;
+
     // Parsing the json manually since the response.json changes based on tags, cannot guarantee structure
-    let mut repository_information: serde_json::Value = response.json()?;
-    let siblings: Vec<Sibling> =
+    let mut repository_information: serde_json::Value = match response.status() {
+        StatusCode::OK => response.json()?,
+        StatusCode::NOT_FOUND => {
+            panic!("File {} not found", &response.url());
+        }
+        StatusCode::UNAUTHORIZED => {
+            panic!("Unauthorized to load file {}.", &response.url());
+        }
+        err => panic!("Received response status: {:?}", err),
+    };
+
+    let siblings: Vec<file_loader::Sibling> =
         serde_json::from_value(repository_information["siblings"].take()).unwrap();
-    let filtered_siblings = filter_siblings(siblings, args.filter);
+
+    let filtered_siblings = match &repository.filter {
+        Some(filter) => file_loader::filter_siblings(siblings, &filter),
+        None => siblings,
+    };
 
     for file in filtered_siblings {
-        let remote_file_url = format!(
-            "{base_url}/{repo}/resolve/main/{file_path}",
-            base_url = base_url,
-            repo = args.repository,
-            file_path = file.rfilename,
-        );
-        match load_file(remote_file_url, file.rfilename) {
+        let remote_file_url =
+            hf_uri::UrlCreater::create_remote_file_url(&repository.name, &file.rfilename);
+        // adjusts save path for filter directory to remove unnecessary structure
+        let file_name_path = match &repository.filter {
+            // matches if only 1 file should be loaded, then load it in the dest_dir
+            Some(filter) => match Path::new(filter).extension() {
+                Some(_) => Path::new(Path::new(filter).file_name().unwrap()),
+                None => Path::new(file.rfilename.as_str())
+                    .strip_prefix(filter)
+                    .unwrap(),
+            },
+            None => Path::new(file.rfilename.as_str()),
+        };
+
+        match file_loader::download_and_save_file(
+            remote_file_url,
+            &file_name_path,
+            args.destination_dir.clone(),
+        ) {
             Ok(_) => (),
             Err(why) => panic!("couldn't load file {}, ", why),
         }
     }
+
     Ok(())
 }
 
-fn load_file(file_url: String, file_path: String) -> Result<()> {
-    let path = Path::new(&file_path);
-    let directory = path.parent().unwrap();
-
-    let requested_file = reqwest::blocking::get(file_url)?;
-
-    if !directory.exists() {
-        fs::create_dir(directory)?;
-    }
-
-    let mut file = File::create(&path)?;
-    let content = requested_file.text()?;
-    file.write_all(content.as_bytes())?;
-    Ok(())
-}
-
-fn filter_siblings(siblings: Vec<Sibling>, include_filter_path: Vec<String>) -> Vec<Sibling> {
-    siblings
-        .into_iter()
-        .filter(|sibling| {
-            include_filter_path
-                .iter()
-                .any(|path| sibling.rfilename.as_str().contains(path))
-        })
-        .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn ftest_ilter_siblings() {
-        let test_siblings: Vec<Sibling> = vec![
-            Sibling {
-                rfilename: String::from("infinity/tokenizers/tokenizer.json"),
-            },
-            Sibling {
-                rfilename: String::from("infinity/tokenizers/tokenizer.json"),
-            },
-            Sibling {
-                rfilename: String::from("huggingface/tokenizer.json"),
-            },
-            Sibling {
-                rfilename: String::from("tokenizers/tokenizer.json"),
-            },
-        ];
-        let test_include_filter_path = vec![String::from("infinity"), String::from("huggingface")];
-        let test_output = filter_siblings(test_siblings, test_include_filter_path);
-        assert_eq!(
-            test_output,
-            vec![
-                Sibling {
-                    rfilename: String::from("infinity/tokenizers/tokenizer.json"),
-                },
-                Sibling {
-                    rfilename: String::from("infinity/tokenizers/tokenizer.json"),
-                },
-                Sibling {
-                    rfilename: String::from("huggingface/tokenizer.json"),
-                }
-            ],
-        );
-    }
-    #[test]
-    #[should_panic]
-    fn another() {
-        panic!("Make this test fail");
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     #[test]
+//     fn test_ilter_siblings() {
+//         let test_siblings: Vec<Sibling> = vec![
+//             Sibling {
+//                 rfilename: String::from("infinity/tokenizers/tokenizer.json"),
+//             },
+//             Sibling {
+//                 rfilename: String::from("infinity/tokenizers/tokenizer.json"),
+//             },
+//             Sibling {
+//                 rfilename: String::from("huggingface/tokenizer.json"),
+//             },
+//             Sibling {
+//                 rfilename: String::from("tokenizers/tokenizer.json"),
+//             },
+//         ];
+//         let test_include_filter_path = vec![String::from("infinity"), String::from("huggingface")];
+//         let test_output = filter_siblings(test_siblings, test_include_filter_path);
+//         assert_eq!(
+//             test_output,
+//             vec![
+//                 Sibling {
+//                     rfilename: String::from("infinity/tokenizers/tokenizer.json"),
+//                 },
+//                 Sibling {
+//                     rfilename: String::from("infinity/tokenizers/tokenizer.json"),
+//                 },
+//                 Sibling {
+//                     rfilename: String::from("huggingface/tokenizer.json"),
+//                 }
+//             ],
+//         );
+//     }
+//     #[test]
+//     #[should_panic]
+//     fn another() {
+//         panic!("Make this test fail");
+//     }
+// }
