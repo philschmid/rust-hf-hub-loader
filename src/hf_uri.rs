@@ -53,14 +53,13 @@ impl UrlCreater {
   }
   pub fn create_remote_file_url(repository: &str, file_path: &str) -> String {
     format!(
-      "{base_url}/{repo}/raw/main/{file_path}",
+      "{base_url}/{repo}/resolve/main/{file_path}",
       base_url = UrlCreater::BASE_HF_URL,
       repo = repository,
       file_path = file_path,
     )
   }
 }
-
 #[cfg(test)]
 mod tests {
   use super::*;
