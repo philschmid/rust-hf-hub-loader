@@ -35,8 +35,7 @@ struct CliArgs {
     filter: Vec<String>,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let args = CliArgs::from_args();
     println!("{:?}", args);
     let base_url = "https://huggingface.co";
@@ -45,9 +44,9 @@ async fn main() -> Result<()> {
         "https://huggingface.co/api/models/{repo}",
         repo = args.repository
     );
-    let response = reqwest::get(&request_url).await?;
+    let response = reqwest::blocking::get(&request_url)?;
     // Parsing the json manually since the response.json changes based on tags, cannot guarantee structure
-    let mut repository_information: serde_json::Value = response.json().await?;
+    let mut repository_information: serde_json::Value = response.json()?;
     let siblings: Vec<Sibling> =
         serde_json::from_value(repository_information["siblings"].take()).unwrap();
     let filtered_siblings = filter_siblings(siblings, args.filter);
@@ -59,26 +58,26 @@ async fn main() -> Result<()> {
             repo = args.repository,
             file_path = file.rfilename,
         );
-        load_file(remote_file_url, file.rfilename).await?
+        match load_file(remote_file_url, file.rfilename) {
+            Ok(_) => (),
+            Err(why) => panic!("couldn't load file {}, ", why),
+        }
     }
     Ok(())
 }
 
-async fn load_file(file_url: String, file_path: String) -> Result<()> {
+fn load_file(file_url: String, file_path: String) -> Result<()> {
     let path = Path::new(&file_path);
     let directory = path.parent().unwrap();
 
-    let requested_file = reqwest::get(file_url).await?;
+    let requested_file = reqwest::blocking::get(file_url)?;
 
     if !directory.exists() {
         fs::create_dir(directory)?;
     }
 
-    let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}, {:?}", why, path),
-        Ok(file) => file,
-    };
-    let content = requested_file.text().await?;
+    let mut file = File::create(&path)?;
+    let content = requested_file.text()?;
     file.write_all(content.as_bytes())?;
     Ok(())
 }
