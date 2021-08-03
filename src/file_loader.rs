@@ -76,7 +76,7 @@ mod tests {
     let file_url = String::from(
       "https://huggingface.co/philschmid/infinity-sentiment/raw/main/infinity/config.json",
     );
-    match download_and_save_file(file_url, String::from(file_path.to_str().unwrap()), None) {
+    match download_and_save_file(file_url, Path::new(file_path.to_str().unwrap()), None) {
       Ok(_) => {}
       Err(err) => panic!(err),
     }
@@ -94,7 +94,7 @@ mod tests {
     let file_url = String::from(
       "https://huggingface.co/philschmid/infinity-sentiment/raw/main/infinity/config2.json",
     );
-    match download_and_save_file(file_url, String::from(file_path.to_str().unwrap()), None) {
+    match download_and_save_file(file_url, Path::new(file_path.to_str().unwrap()), None) {
       Ok(_) => {}
       Err(err) => panic!(err),
     }
