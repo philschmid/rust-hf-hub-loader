@@ -69,7 +69,7 @@ mod tests {
     let hf_uri = "xs://philschmid/infinity-sentiment";
     match parse(hf_uri) {
       Ok(res) => println!("{:?}", res),
-      Err(err) => panic!(err),
+      Err(err) => panic!("{}",err),
     }
   }
 
@@ -124,7 +124,7 @@ mod tests {
   #[test]
   fn test_create_remote_file_url() {
     let test_url =
-      "https://huggingface.co/philschmid/infinity-sentiment/raw/main/infinity/config.json";
+      "https://huggingface.co/philschmid/infinity-sentiment/resolve/main/infinity/config.json";
     let created_url =
       UrlCreater::create_remote_file_url("philschmid/infinity-sentiment", "infinity/config.json");
     assert_eq!(test_url, created_url)

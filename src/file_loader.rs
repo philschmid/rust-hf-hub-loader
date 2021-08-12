@@ -78,7 +78,7 @@ mod tests {
     );
     match download_and_save_file(file_url, Path::new(file_path.to_str().unwrap()), None) {
       Ok(_) => {}
-      Err(err) => panic!(err),
+      Err(err) => panic!("{}",err),
     }
     println!("{:?}", temp.join("infinity/config.json"));
     let contents = fs::read_to_string(temp.join("infinity/config.json")).unwrap();
@@ -96,7 +96,7 @@ mod tests {
     );
     match download_and_save_file(file_url, Path::new(file_path.to_str().unwrap()), None) {
       Ok(_) => {}
-      Err(err) => panic!(err),
+      Err(err) => panic!("{}",err),
     }
   }
 
@@ -131,10 +131,5 @@ mod tests {
         }
       ],
     );
-  }
-  #[test]
-  #[should_panic]
-  fn another() {
-    panic!("Make this test fail");
   }
 }

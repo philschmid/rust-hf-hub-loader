@@ -44,7 +44,7 @@ fn main() -> Result<()> {
 
     let repository: hf_uri::Repository = match hf_uri::parse(&args.hf_uri) {
         Ok(repository) => repository,
-        Err(err) => panic!(err),
+        Err(why) => panic!("{}",why)
     };
 
     let response = reqwest::blocking::get(&repository.url)?;
@@ -96,46 +96,3 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     #[test]
-//     fn test_ilter_siblings() {
-//         let test_siblings: Vec<Sibling> = vec![
-//             Sibling {
-//                 rfilename: String::from("infinity/tokenizers/tokenizer.json"),
-//             },
-//             Sibling {
-//                 rfilename: String::from("infinity/tokenizers/tokenizer.json"),
-//             },
-//             Sibling {
-//                 rfilename: String::from("huggingface/tokenizer.json"),
-//             },
-//             Sibling {
-//                 rfilename: String::from("tokenizers/tokenizer.json"),
-//             },
-//         ];
-//         let test_include_filter_path = vec![String::from("infinity"), String::from("huggingface")];
-//         let test_output = filter_siblings(test_siblings, test_include_filter_path);
-//         assert_eq!(
-//             test_output,
-//             vec![
-//                 Sibling {
-//                     rfilename: String::from("infinity/tokenizers/tokenizer.json"),
-//                 },
-//                 Sibling {
-//                     rfilename: String::from("infinity/tokenizers/tokenizer.json"),
-//                 },
-//                 Sibling {
-//                     rfilename: String::from("huggingface/tokenizer.json"),
-//                 }
-//             ],
-//         );
-//     }
-//     #[test]
-//     #[should_panic]
-//     fn another() {
-//         panic!("Make this test fail");
-//     }
-// }
