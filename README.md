@@ -49,6 +49,14 @@ loads the only specific file `config.json` in current dir
 ```
 loads the only specific file `config.json` in destination directory `infinity`
 
+### 6. Pull a private repository 
+```Bash
+./hf-hub-loader hf://philschmid/private-repo-test --auth-token api_xx
+```
+loads the complete repo in the current dir, like git clone
+
+ 
+
 
 ## Getting started locally
 

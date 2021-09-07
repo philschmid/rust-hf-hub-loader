@@ -35,8 +35,8 @@ struct CliArgs {
     revision: String,
 
     /// Wether auth token should be used or not
-    #[structopt(short = "t", long = "token")]
-    use_auth_token: bool,
+    #[structopt(short = "t", long = "auth-token", default_value = "none")]
+    auth_token: String,
 }
 
 fn main() -> Result<()> {
@@ -47,7 +47,10 @@ fn main() -> Result<()> {
         Err(why) => panic!("{}",why)
     };
 
-    let response = reqwest::blocking::get(&repository.url)?;
+    let client = reqwest::blocking::Client::new();
+    let response = client.get(&repository.url)
+    .header("authorization", format!("Bearer {token}", token=&args.auth_token))
+    .send()?;
 
     // Parsing the json manually since the response.json changes based on tags, cannot guarantee structure
     let mut repository_information: serde_json::Value = match response.status() {
@@ -87,6 +90,7 @@ fn main() -> Result<()> {
         match file_loader::download_and_save_file(
             remote_file_url,
             &file_name_path,
+            &args.auth_token,
             args.destination_dir.clone(),
         ) {
             Ok(_) => (),
@@ -96,3 +100,6 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+
+
+

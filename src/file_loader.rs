@@ -21,6 +21,7 @@ pub struct Sibling {
 pub fn download_and_save_file(
   file_url: String,
   destination_file_path: &Path,
+  auth_token: &str,
   destination_directory: Option<String>,
 ) -> Result<()> {
   let path = match destination_directory {
@@ -30,7 +31,10 @@ pub fn download_and_save_file(
 
   println!("Loading: {}", file_url);
 
-  let response = reqwest::blocking::get(file_url)?;
+  let client = reqwest::blocking::Client::new();
+  let response = client.get(file_url)
+  .header("authorization", format!("Bearer {token}", token=auth_token))
+  .send()?;
 
   let content = match response.status() {
     StatusCode::OK => response.text()?,
@@ -76,7 +80,7 @@ mod tests {
     let file_url = String::from(
       "https://huggingface.co/philschmid/infinity-sentiment/raw/main/infinity/config.json",
     );
-    match download_and_save_file(file_url, Path::new(file_path.to_str().unwrap()), None) {
+    match download_and_save_file(file_url, Path::new(file_path.to_str().unwrap()),"none", None) {
       Ok(_) => {}
       Err(err) => panic!("{}",err),
     }
@@ -94,7 +98,20 @@ mod tests {
     let file_url = String::from(
       "https://huggingface.co/philschmid/infinity-sentiment/raw/main/infinity/config2.json",
     );
-    match download_and_save_file(file_url, Path::new(file_path.to_str().unwrap()), None) {
+    match download_and_save_file(file_url, Path::new(file_path.to_str().unwrap()),"none", None) {
+      Ok(_) => {}
+      Err(err) => panic!("{}",err),
+    }
+  }
+
+  #[test]
+  fn test_download_of_private() {
+    let temp = TempDir::default();
+    let file_path = temp.join("config.json");
+    let file_url = String::from(
+      "  https://huggingface.co/philschmid/private-repo-test/resolve/main/config.json",
+    );
+    match download_and_save_file(file_url, Path::new(file_path.to_str().unwrap()),"xxx", None) {
       Ok(_) => {}
       Err(err) => panic!("{}",err),
     }
@@ -133,3 +150,4 @@ mod tests {
     );
   }
 }
+
