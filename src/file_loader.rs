@@ -35,9 +35,9 @@ pub fn download_and_save_file(
   let response = client.get(file_url)
   .header("authorization", format!("Bearer {token}", token=auth_token))
   .send()?;
-
+  
   let content = match response.status() {
-    StatusCode::OK => response.text()?,
+    StatusCode::OK => response.bytes().unwrap(),
     StatusCode::NOT_FOUND => {
       panic!("File {} not found", &response.url());
     }
@@ -46,8 +46,9 @@ pub fn download_and_save_file(
     }
     err => panic!("Received response status: {:?}", err),
   };
-
-  match path.parent() {
+  // https://huggingface.co/philschmid/mrm8488__bert_tiny_finetuned_sms_spam_detection/resolve/main/repository/mrm8488__bert_tiny_finetuned_sms_spam_detection/1/model.onnx
+  // https://huggingface.co/philschmid/mrm8488__bert_tiny_finetuned_sms_spam_detection/resolve/main/repository/mrm8488__bert_tiny_finetuned_sms_spam_detection/1/model.onnx
+ match path.parent() {
     Some(parent) if parent != Path::new("") => {
       if !parent.exists() {
         fs::create_dir_all(parent)?;
@@ -56,9 +57,9 @@ pub fn download_and_save_file(
     }
     _ => {}
   };
-
   let mut file = File::create(&path)?;
-  file.write_all(content.as_bytes())?;
+  let slice: &[u8] = content.as_ref();
+  file.write_all(slice)?;
   Ok(())
 }
 
