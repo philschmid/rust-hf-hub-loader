@@ -52,51 +52,55 @@ fn main() -> Result<()> {
     .header("authorization", format!("Bearer {token}", token=&args.auth_token))
     .send()?;
 
+    println!("{:?}",response.text());
+    println!("{}",&repository.url);
+    println!("{}",&args.auth_token);
     // Parsing the json manually since the response.json changes based on tags, cannot guarantee structure
-    let mut repository_information: serde_json::Value = match response.status() {
-        StatusCode::OK => response.json()?,
-        StatusCode::NOT_FOUND => {
-            panic!("File {} not found", &response.url());
-        }
-        StatusCode::UNAUTHORIZED => {
-            panic!("Unauthorized to load file {}.", &response.url());
-        }
-        err => panic!("Received response status: {:?}", err),
-    };
+    // let mut repository_information: serde_json::Value = match response.status() {
+    //     StatusCode::OK => response.json()?,
+    //     StatusCode::NOT_FOUND => {
+    //         panic!("File {} not found", &response.url());
+    //     }
+    //     StatusCode::UNAUTHORIZED => {
+    //         panic!("Unauthorized to load file {}.", &response.url());
+    //     }
+    //     err => panic!("Received response status: {:?}", err),
+    // };
 
-    let siblings: Vec<file_loader::Sibling> =
-        serde_json::from_value(repository_information["siblings"].take()).unwrap();
+    // let siblings: Vec<file_loader::Sibling> =
+    //     serde_json::from_value(repository_information["siblings"].take()).unwrap();
+    // println!("{:?}",siblings);
 
-    let filtered_siblings = match &repository.filter {
-        Some(filter) => file_loader::filter_siblings(siblings, &filter),
-        None => siblings,
-    };
+    // let filtered_siblings = match &repository.filter {
+    //     Some(filter) => file_loader::filter_siblings(siblings, &filter),
+    //     None => siblings,
+    // };
 
-    for file in filtered_siblings {
-        let remote_file_url =
-            hf_uri::UrlCreater::create_remote_file_url(&repository.name, &file.rfilename);
-        // adjusts save path for filter directory to remove unnecessary structure
-        let file_name_path = match &repository.filter {
-            // matches if only 1 file should be loaded, then load it in the dest_dir
-            Some(filter) => match Path::new(filter).extension() {
-                Some(_) => Path::new(Path::new(filter).file_name().unwrap()),
-                None => Path::new(file.rfilename.as_str())
-                    .strip_prefix(filter)
-                    .unwrap(),
-            },
-            None => Path::new(file.rfilename.as_str()),
-        };
+    // for file in filtered_siblings {
+    //     let remote_file_url =
+    //         hf_uri::UrlCreater::create_remote_file_url(&repository.name, &file.rfilename);
+    //     // adjusts save path for filter directory to remove unnecessary structure
+    //     let file_name_path = match &repository.filter {
+    //         // matches if only 1 file should be loaded, then load it in the dest_dir
+    //         Some(filter) => match Path::new(filter).extension() {
+    //             Some(_) => Path::new(Path::new(filter).file_name().unwrap()),
+    //             None => Path::new(file.rfilename.as_str())
+    //                 .strip_prefix(filter)
+    //                 .unwrap(),
+    //         },
+    //         None => Path::new(file.rfilename.as_str()),
+    //     };
 
-        match file_loader::download_and_save_file(
-            remote_file_url,
-            &file_name_path,
-            &args.auth_token,
-            args.destination_dir.clone(),
-        ) {
-            Ok(_) => (),
-            Err(why) => panic!("couldn't load file {}, ", why),
-        }
-    }
+    //     match file_loader::download_and_save_file(
+    //         remote_file_url,
+    //         &file_name_path,
+    //         &args.auth_token,
+    //         args.destination_dir.clone(),
+    //     ) {
+    //         Ok(_) => (),
+    //         Err(why) => panic!("couldn't load file {}, ", why),
+    //     }
+    // }
 
     Ok(())
 }
