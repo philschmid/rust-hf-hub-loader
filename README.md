@@ -3,7 +3,7 @@
 `hf-hub-loader` is a tiny CLI that pulls repositories from hf.co/models using a binary instead of installing git or git lfs.
 ## Installation
 
-* Linux 64-bit: https://github.com/philschmid/rust-hf-hub-loader/releases/download/v0.1/hf-hub-loader
+* Linux 64-bit: https://github.com/philschmid/rust-hf-hub-loader/releases/download/v0.3/hf-hub-loader
 * Mac 64-bit: https://github.com/philschmid/rust-hf-hub-loader/releases/download/v0.1/hf-hub-loader
 
 change permission to execute the binary
