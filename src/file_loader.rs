@@ -50,7 +50,8 @@ pub fn download_and_save_file(
   match path.parent() {
     Some(parent) if parent != Path::new("") => {
       if !parent.exists() {
-        fs::create_dir(parent)?;
+        fs::create_dir_all(parent)?;
+
       }
     }
     _ => {}
